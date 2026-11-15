@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Database Files
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Alembic cache
+alembic/__pycache__/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Build & Distribution
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Node & Frontend
+node_modules/
+.npm
+dist-ssr/
+*.tsbuildinfo
+
+# Logs & Temporary Files
+*.log
+*.tmp
+.cache/
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
