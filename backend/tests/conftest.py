@@ -1,3 +1,4 @@
+import os
 import sys
 from collections.abc import Generator
 from pathlib import Path
@@ -11,6 +12,13 @@ from sqlalchemy.pool import StaticPool
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
+
+# Provide a deterministic test-only signing secret unless the environment
+# already supplies one. Production must configure its own secret.
+os.environ.setdefault(
+    "JWT_SECRET_KEY",
+    "test-only-jwt-secret-key-for-velle-log-suite",
+)
 
 from app.main import app
 from app.db.base import Base

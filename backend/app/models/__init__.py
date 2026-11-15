@@ -1,4 +1,5 @@
-"""
-SQLAlchemy ORM models package.
-Application database models will be defined here in subsequent milestones.
-"""
+"""SQLAlchemy ORM models package."""
+
+from app.models.user import User
+
+__all__ = ["User"]
