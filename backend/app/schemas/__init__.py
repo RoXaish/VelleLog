@@ -1,5 +1,9 @@
 """Pydantic schemas package for request and response validation."""
 
+from app.schemas.availability import (
+    AvailabilitySlotResponse,
+    MemberAvailabilityNow,
+)
 from app.schemas.busy_block import (
     BusyBlockCopyDay,
     BusyBlockCreate,
@@ -17,6 +21,7 @@ from app.schemas.token import TokenResponse
 from app.schemas.user import UserCreate, UserLogin, UserResponse
 
 __all__ = [
+    "AvailabilitySlotResponse",
     "BusyBlockCopyDay",
     "BusyBlockCreate",
     "BusyBlockResponse",
@@ -26,6 +31,7 @@ __all__ = [
     "GroupJoin",
     "GroupMemberResponse",
     "GroupResponse",
+    "MemberAvailabilityNow",
     "TokenResponse",
     "UserCreate",
     "UserLogin",

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from datetime import date
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
@@ -6,11 +7,16 @@ from sqlalchemy.orm import Session, selectinload
 from app.api.deps import CurrentUser
 from app.db.session import get_db
 from app.models.group import Group, GroupMembership, GroupRole
+from app.schemas.availability import AvailabilitySlotResponse, MemberAvailabilityNow
 from app.schemas.group import (
     GroupCreate,
     GroupDetailResponse,
     GroupJoin,
     GroupResponse,
+)
+from app.services.availability import (
+    get_group_availability_now,
+    get_group_availability_slots,
 )
 
 router = APIRouter(prefix="/groups", tags=["groups"])
@@ -167,3 +173,54 @@ def get_group(
         )
 
     return GroupDetailResponse.model_validate(group)
+
+
+@router.get(
+    "/{group_id}/availability/now",
+    response_model=list[MemberAvailabilityNow],
+    summary="Get current free/busy status for each member of the group",
+)
+def get_availability_now(
+    group_id: int,
+    current_user: CurrentUser,
+    db: Session = Depends(get_db),
+) -> list[MemberAvailabilityNow]:
+    """
+    Return each group member's current status: free or busy, evaluated in
+    the Asia/Kolkata timezone. Only active group members can access this endpoint.
+    Private labels and schedule details are never exposed.
+    """
+    return get_group_availability_now(db, group_id, current_user.id)
+
+
+@router.get(
+    "/{group_id}/availability/slots",
+    response_model=list[AvailabilitySlotResponse],
+    summary="Get common free-time windows for the group on a date",
+)
+def get_availability_slots(
+    group_id: int,
+    current_user: CurrentUser,
+    date: date = Query(..., description="Target date (YYYY-MM-DD)"),
+    min_duration: int | None = Query(None, alias="min_duration", ge=1),
+    duration_minutes: int | None = Query(None, alias="duration_minutes", ge=1),
+    min_members: int | None = Query(None, alias="min_members", ge=1),
+    min_free_members: int | None = Query(None, alias="min_free_members", ge=1),
+    db: Session = Depends(get_db),
+) -> list[AvailabilitySlotResponse]:
+    """
+    Calculate matching common free-time windows for group members on target date
+    in the Asia/Kolkata timezone. Considers all recurring BusyBlocks and merges
+    overlapping busy intervals. Only active group members can access this endpoint.
+    """
+    dur = duration_minutes or min_duration or 30
+    req_free = min_free_members or min_members
+    return get_group_availability_slots(
+        db,
+        group_id=group_id,
+        current_user_id=current_user.id,
+        target_date=date,
+        min_duration_minutes=dur,
+        min_free_members=req_free,
+    )
+
