@@ -68,6 +68,7 @@ def test_me_user_matches_token_subject(client: TestClient, db_session: Session) 
 
 def test_me_missing_token_returns_401(client: TestClient, db_session: Session) -> None:
     register_and_login(client)
+    client.cookies.clear()
 
     assert_unauthorized(client.get(ME_URL))
 

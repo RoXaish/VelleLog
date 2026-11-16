@@ -19,6 +19,8 @@ os.environ.setdefault(
     "JWT_SECRET_KEY",
     "test-only-jwt-secret-key-for-velle-log-suite",
 )
+os.environ.setdefault("CORS_ORIGINS", '["http://frontend.test"]')
+os.environ.setdefault("COOKIE_SECURE", "false")
 
 from app.main import app
 from app.db.base import Base
@@ -54,6 +56,14 @@ def client() -> Generator[TestClient, None, None]:
     """
     with TestClient(app) as test_client:
         yield test_client
+
+
+@pytest.fixture(autouse=True)
+def reset_client_cookies(client: TestClient) -> Generator[None, None, None]:
+    """Keep the session-scoped test client's cookie jar isolated per test."""
+    client.cookies.clear()
+    yield
+    client.cookies.clear()
 
 
 @pytest.fixture

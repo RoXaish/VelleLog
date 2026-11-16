@@ -1,9 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import CurrentUser
+from app.api.deps import CurrentUser, verify_csrf
+from app.core.cookies import (
+    AUTH_COOKIE_NAME,
+    clear_auth_cookies,
+    generate_csrf_token,
+    set_auth_cookies,
+)
 from app.core.security import hash_password, verify_password
 from app.core.tokens import create_access_token
 from app.db.session import get_db
@@ -61,9 +67,16 @@ def register_user(payload: UserCreate, db: Session = Depends(get_db)) -> UserRes
     response_model=TokenResponse,
     summary="Authenticate and receive an access token",
 )
-def login_user(payload: UserLogin, db: Session = Depends(get_db)) -> TokenResponse:
+def login_user(
+    payload: UserLogin,
+    response: Response,
+    db: Session = Depends(get_db),
+) -> TokenResponse:
     """
-    Authenticate with email and password and return a JWT access token.
+    Authenticate with email and password.
+
+    The browser session is established with HttpOnly and CSRF cookies. The
+    response body still returns the access token for non-browser API clients.
 
     Unknown emails and incorrect passwords intentionally produce the same
     generic error so account existence is not revealed.
@@ -79,7 +92,29 @@ def login_user(payload: UserLogin, db: Session = Depends(get_db)) -> TokenRespon
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    return TokenResponse(access_token=create_access_token(subject=user.id))
+    access_token = create_access_token(subject=user.id)
+    set_auth_cookies(response, access_token, generate_csrf_token())
+    return TokenResponse(access_token=access_token)
+
+
+@router.post(
+    "/logout",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Clear the browser authentication cookies",
+)
+def logout_user(request: Request) -> Response:
+    """
+    End a cookie-based session.
+
+    Requests that carry an auth cookie must also prove CSRF possession via the
+    double-submit header. Bearer-only clients receive no cookies to clear.
+    """
+    if AUTH_COOKIE_NAME in request.cookies:
+        verify_csrf(request)
+
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    clear_auth_cookies(response)
+    return response
 
 
 @router.get(

@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 
 const NAV_LINKS = [
   { href: '#product', label: 'Product' },
@@ -28,6 +30,7 @@ const BrandMark: React.FC = () => (
 );
 
 export const Header: React.FC = () => {
+  const { status } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
@@ -86,19 +89,21 @@ export const Header: React.FC = () => {
         </div>
 
         <div className="nav-actions">
-          <button
-            type="button"
-            className="nav-login"
-            disabled
-            aria-label="Log in — not available in this preview build"
-            title="Log in arrives in a later milestone"
-          >
-            Log in
-          </button>
+          {status === 'authenticated' ? (
+            <Link to="/account" className="nav-cta">
+              Your space
+            </Link>
+          ) : (
+            <>
+              <Link to="/login" className="nav-login">
+                Log in
+              </Link>
 
-          <a href="#product" className="nav-cta">
-            Get started
-          </a>
+              <Link to="/signup" className="nav-cta">
+                Get started
+              </Link>
+            </>
+          )}
 
           <button
             type="button"
@@ -137,10 +142,32 @@ export const Header: React.FC = () => {
                 {link.label}
               </a>
             ))}
-            <button type="button" className="mobile-menu__login" disabled>
-              Log in
-              <span className="mobile-menu__soon">Soon</span>
-            </button>
+            {status === 'authenticated' ? (
+              <Link
+                to="/account"
+                className="mobile-menu__cta"
+                onClick={closeMenu}
+              >
+                Your space
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="mobile-menu__login"
+                  onClick={closeMenu}
+                >
+                  Log in
+                </Link>
+                <Link
+                  to="/signup"
+                  className="mobile-menu__cta"
+                  onClick={closeMenu}
+                >
+                  Get started
+                </Link>
+              </>
+            )}
           </div>
         )}
       </nav>

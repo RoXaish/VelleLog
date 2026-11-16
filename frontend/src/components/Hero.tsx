@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 export const Hero: React.FC = () => {
   return (
@@ -21,7 +22,7 @@ export const Hero: React.FC = () => {
         </p>
 
         <div className="hero__actions hero-anim" style={{ animationDelay: '270ms' }}>
-          <a href="#product" className="btn btn--primary">
+          <Link to="/signup" className="btn btn--primary">
             <span>Get started</span>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <path
@@ -38,7 +39,7 @@ export const Hero: React.FC = () => {
                 strokeLinejoin="round"
               />
             </svg>
-          </a>
+          </Link>
 
           <a href="#how-it-works" className="btn btn--ghost">
             <span>See how it works</span>
