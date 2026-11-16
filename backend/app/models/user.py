@@ -1,9 +1,13 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.group import Group, GroupMembership
 
 
 class User(Base):
@@ -29,4 +33,17 @@ class User(Base):
         nullable=False,
         server_default=func.now(),
         onupdate=func.now(),
+    )
+
+    owned_groups: Mapped[list["Group"]] = relationship(
+        "Group",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+        foreign_keys="Group.owner_id",
+    )
+    group_memberships: Mapped[list["GroupMembership"]] = relationship(
+        "GroupMembership",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="GroupMembership.user_id",
     )

@@ -12,6 +12,7 @@ if str(BACKEND_DIR) not in sys.path:
 
 from app.core.config import settings
 from app.db.base import Base
+import app.models  # noqa: F401
 
 # Alembic Config object
 config = context.config
