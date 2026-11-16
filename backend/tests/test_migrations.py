@@ -286,3 +286,110 @@ def test_migration_creates_expected_busy_blocks_table(
                 )
     finally:
         engine.dispose()
+
+
+def test_migration_creates_expected_schedule_exceptions_table(
+    tmp_path, monkeypatch
+) -> None:
+    """
+    Running the migration chain up to head creates the schedule_exceptions
+    table with expected columns, indexes, check constraints, and cascade delete.
+    """
+    database_url = f"sqlite:///{(tmp_path / 'migration_exceptions_test.db').as_posix()}"
+    monkeypatch.setattr(settings, "DATABASE_URL", database_url)
+
+    alembic_config = Config(str(BACKEND_DIR / "alembic.ini"))
+    alembic_config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+
+    command.upgrade(alembic_config, "head")
+
+    engine = create_engine(database_url)
+    try:
+        inspector = inspect(engine)
+        table_names = inspector.get_table_names()
+        assert "schedule_exceptions" in table_names
+
+        cols = {col["name"]: col for col in inspector.get_columns("schedule_exceptions")}
+        assert set(cols) == {
+            "id",
+            "user_id",
+            "date",
+            "start_time",
+            "end_time",
+            "exception_type",
+            "private_label",
+            "created_at",
+            "updated_at",
+        }
+        assert cols["id"]["nullable"] is False
+        assert cols["user_id"]["nullable"] is False
+        assert cols["date"]["nullable"] is False
+        assert cols["start_time"]["nullable"] is False
+        assert cols["end_time"]["nullable"] is False
+        assert cols["exception_type"]["nullable"] is False
+        assert cols["private_label"]["nullable"] is True
+        assert cols["created_at"]["nullable"] is False
+        assert cols["updated_at"]["nullable"] is False
+
+        indexes = inspector.get_indexes("schedule_exceptions")
+        index_cols = [tuple(idx["column_names"]) for idx in indexes]
+        assert ("user_id",) in index_cols
+        assert ("user_id", "date") in index_cols
+
+        fks = inspector.get_foreign_keys("schedule_exceptions")
+        assert len(fks) == 1
+        fk = fks[0]
+        assert fk["referred_table"] == "users"
+        assert fk["referred_columns"] == ["id"]
+        assert fk["constrained_columns"] == ["user_id"]
+        assert (fk.get("options") or {}).get("ondelete", "").upper() == "CASCADE"
+
+        check_constraints = inspector.get_check_constraints("schedule_exceptions")
+        assert any(
+            ck.get("name") == "ck_schedule_exceptions_time_range"
+            or ("start_time" in ck.get("sqltext", "") and "end_time" in ck.get("sqltext", ""))
+            for ck in check_constraints
+        ), "schedule_exceptions must define check constraint on time range"
+        assert any(
+            ck.get("name") == "ck_schedule_exceptions_type"
+            or ("exception_type" in ck.get("sqltext", ""))
+            for ck in check_constraints
+        ), "schedule_exceptions must define check constraint on exception type"
+
+        with engine.connect() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO users (id, email, password_hash, created_at, updated_at) "
+                    "VALUES (1, 'ex_mig_user@example.com', 'hash', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                )
+            )
+            conn.commit()
+
+            # Valid schedule exception insert succeeds
+            conn.execute(
+                text(
+                    "INSERT INTO schedule_exceptions (user_id, date, start_time, end_time, exception_type, private_label, created_at, updated_at) "
+                    "VALUES (1, '2026-11-20', '09:00:00', '11:00:00', 'busy', 'Doctor', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                )
+            )
+            conn.commit()
+
+            # Invalid type rejected
+            with pytest.raises(IntegrityError):
+                conn.execute(
+                    text(
+                        "INSERT INTO schedule_exceptions (user_id, date, start_time, end_time, exception_type, created_at, updated_at) "
+                        "VALUES (1, '2026-11-20', '12:00:00', '13:00:00', 'invalid_type', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                    )
+                )
+
+            # Invalid time range (start >= end) rejected
+            with pytest.raises(IntegrityError):
+                conn.execute(
+                    text(
+                        "INSERT INTO schedule_exceptions (user_id, date, start_time, end_time, exception_type, created_at, updated_at) "
+                        "VALUES (1, '2026-11-20', '14:00:00', '13:00:00', 'free', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                    )
+                )
+    finally:
+        engine.dispose()

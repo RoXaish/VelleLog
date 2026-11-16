@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models.busy_block import BusyBlock
 from app.models.group import Group, GroupMembership
+from app.models.schedule_exception import ScheduleException
 from app.schemas.availability import AvailabilitySlotResponse, MemberAvailabilityNow
 
 # Asia/Kolkata timezone (UTC+05:30)
@@ -47,6 +48,80 @@ def merge_intervals(intervals: Sequence[tuple[int, int]]) -> list[tuple[int, int
     return merged
 
 
+def subtract_intervals(
+    base_intervals: Sequence[tuple[int, int]],
+    remove_intervals: Sequence[tuple[int, int]],
+) -> list[tuple[int, int]]:
+    """
+    Subtract remove_intervals from base_intervals.
+    Returns remaining disjoint intervals from base_intervals.
+    """
+    if not base_intervals:
+        return []
+    if not remove_intervals:
+        return list(base_intervals)
+
+    merged_removes = merge_intervals(remove_intervals)
+    result = []
+
+    for b_start, b_end in base_intervals:
+        pieces = [(b_start, b_end)]
+        for r_start, r_end in merged_removes:
+            next_pieces = []
+            for p_start, p_end in pieces:
+                if r_end <= p_start or r_start >= p_end:
+                    next_pieces.append((p_start, p_end))
+                else:
+                    if p_start < r_start:
+                        next_pieces.append((p_start, r_start))
+                    if r_end < p_end:
+                        next_pieces.append((r_end, p_end))
+            pieces = next_pieces
+        result.extend(pieces)
+
+    return result
+
+
+def compute_effective_busy_intervals(
+    member_ids: Sequence[int],
+    busy_blocks: Sequence[BusyBlock],
+    schedule_exceptions: Sequence[ScheduleException],
+) -> dict[int, list[tuple[int, int]]]:
+    """
+    Computes effective busy intervals [start_sec, end_sec] for each user.
+    - 'busy' exceptions add one-time busy intervals.
+    - 'free' exceptions override recurring busy blocks.
+    - If 'busy' and 'free' exceptions overlap, 'busy' takes precedence.
+    Formula: FinalBusy = merge(subtract(merge(Recurring), Free) + Busy)
+    """
+    user_recurring: dict[int, list[tuple[int, int]]] = {uid: [] for uid in member_ids}
+    user_free_ex: dict[int, list[tuple[int, int]]] = {uid: [] for uid in member_ids}
+    user_busy_ex: dict[int, list[tuple[int, int]]] = {uid: [] for uid in member_ids}
+
+    for b in busy_blocks:
+        if b.user_id in user_recurring:
+            user_recurring[b.user_id].append(
+                (time_to_seconds(b.start_time), time_to_seconds(b.end_time))
+            )
+
+    for ex in schedule_exceptions:
+        if ex.user_id in user_recurring:
+            interval = (time_to_seconds(ex.start_time), time_to_seconds(ex.end_time))
+            if ex.exception_type == "free":
+                user_free_ex[ex.user_id].append(interval)
+            elif ex.exception_type == "busy":
+                user_busy_ex[ex.user_id].append(interval)
+
+    effective_busy: dict[int, list[tuple[int, int]]] = {}
+    for uid in member_ids:
+        merged_rec = merge_intervals(user_recurring[uid])
+        recurring_after_free = subtract_intervals(merged_rec, user_free_ex[uid])
+        all_busy = recurring_after_free + user_busy_ex[uid]
+        effective_busy[uid] = merge_intervals(all_busy)
+
+    return effective_busy
+
+
 def _get_group_for_member(db: Session, group_id: int, current_user_id: int) -> Group:
     """
     Fetch a group with memberships and users loaded, verifying that the group
@@ -84,7 +159,7 @@ def get_group_availability_now(
 ) -> list[MemberAvailabilityNow]:
     """
     Determine whether each group member is currently 'free' or 'busy'
-    based on their recurring BusyBlocks in the Asia/Kolkata timezone.
+    based on their recurring BusyBlocks and schedule exceptions in the Asia/Kolkata timezone.
     Private labels and sensitive schedule data are never exposed.
     """
     group = _get_group_for_member(db, group_id, current_user_id)
@@ -99,7 +174,8 @@ def get_group_availability_now(
         now_kolkata = datetime.now(KOLKATA_TZ)
 
     current_weekday = now_kolkata.weekday()
-    current_time = now_kolkata.time()
+    current_date = now_kolkata.date()
+    current_time_sec = time_to_seconds(now_kolkata.time())
 
     member_ids = [m.user_id for m in group.memberships]
 
@@ -109,24 +185,40 @@ def get_group_availability_now(
             select(BusyBlock).where(
                 BusyBlock.user_id.in_(member_ids),
                 BusyBlock.weekday == current_weekday,
-                BusyBlock.start_time <= current_time,
-                BusyBlock.end_time > current_time,
             )
         )
         .scalars()
         .all()
     )
 
-    busy_user_ids = {b.user_id for b in busy_blocks}
+    # Query schedule exceptions for group members on current date
+    exceptions = (
+        db.execute(
+            select(ScheduleException).where(
+                ScheduleException.user_id.in_(member_ids),
+                ScheduleException.date == current_date,
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    effective_busy = compute_effective_busy_intervals(
+        member_ids=member_ids,
+        busy_blocks=busy_blocks,
+        schedule_exceptions=exceptions,
+    )
 
     results = []
     # Sort members by user_id for deterministic order
     sorted_memberships = sorted(group.memberships, key=lambda m: m.user_id)
     for membership in sorted_memberships:
-        status_value = "busy" if membership.user_id in busy_user_ids else "free"
+        uid = membership.user_id
+        is_busy = any(s <= current_time_sec < e for s, e in effective_busy.get(uid, []))
+        status_value = "busy" if is_busy else "free"
         results.append(
             MemberAvailabilityNow(
-                user_id=membership.user_id,
+                user_id=uid,
                 email=membership.user.email,
                 status=status_value,
             )
@@ -145,8 +237,8 @@ def get_group_availability_slots(
 ) -> list[AvailabilitySlotResponse]:
     """
     Calculate matching common free-time windows for a group on a given date.
-    Considers recurring BusyBlocks, merges overlapping intervals, and enforces
-    minimum duration and minimum free members constraints.
+    Considers recurring BusyBlocks and ScheduleExceptions, merges overlapping intervals,
+    and enforces minimum duration and minimum free members constraints.
     """
     if min_duration_minutes <= 0:
         raise HTTPException(
@@ -184,16 +276,23 @@ def get_group_availability_slots(
         .all()
     )
 
-    # Group and merge busy intervals per user
-    user_busy_raw: dict[int, list[tuple[int, int]]] = {uid: [] for uid in member_ids}
-    for block in blocks:
-        s_sec = time_to_seconds(block.start_time)
-        e_sec = time_to_seconds(block.end_time)
-        user_busy_raw[block.user_id].append((s_sec, e_sec))
+    # Query schedule exceptions for members on this target date
+    exceptions = (
+        db.execute(
+            select(ScheduleException).where(
+                ScheduleException.user_id.in_(member_ids),
+                ScheduleException.date == target_date,
+            )
+        )
+        .scalars()
+        .all()
+    )
 
-    user_busy_merged = {
-        uid: merge_intervals(intervals) for uid, intervals in user_busy_raw.items()
-    }
+    user_busy_merged = compute_effective_busy_intervals(
+        member_ids=member_ids,
+        busy_blocks=blocks,
+        schedule_exceptions=exceptions,
+    )
 
     # Collect boundary points across the entire day [0, 86400]
     points = {0, 86400}

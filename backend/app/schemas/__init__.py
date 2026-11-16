@@ -17,6 +17,11 @@ from app.schemas.group import (
     GroupMemberResponse,
     GroupResponse,
 )
+from app.schemas.schedule_exception import (
+    ScheduleExceptionCreate,
+    ScheduleExceptionResponse,
+    ScheduleExceptionUpdate,
+)
 from app.schemas.token import TokenResponse
 from app.schemas.user import UserCreate, UserLogin, UserResponse
 
@@ -32,6 +37,9 @@ __all__ = [
     "GroupMemberResponse",
     "GroupResponse",
     "MemberAvailabilityNow",
+    "ScheduleExceptionCreate",
+    "ScheduleExceptionResponse",
+    "ScheduleExceptionUpdate",
     "TokenResponse",
     "UserCreate",
     "UserLogin",

@@ -9,6 +9,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.models.busy_block import BusyBlock
     from app.models.group import Group, GroupMembership
+    from app.models.schedule_exception import ScheduleException
 
 
 class User(Base):
@@ -54,4 +55,11 @@ class User(Base):
         cascade="all, delete-orphan",
         foreign_keys="BusyBlock.user_id",
         order_by="BusyBlock.weekday, BusyBlock.start_time",
+    )
+    schedule_exceptions: Mapped[list["ScheduleException"]] = relationship(
+        "ScheduleException",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="ScheduleException.user_id",
+        order_by="ScheduleException.date, ScheduleException.start_time",
     )
