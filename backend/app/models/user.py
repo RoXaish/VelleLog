@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.busy_block import BusyBlock
     from app.models.group import Group, GroupMembership
 
 
@@ -46,4 +47,11 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
         foreign_keys="GroupMembership.user_id",
+    )
+    busy_blocks: Mapped[list["BusyBlock"]] = relationship(
+        "BusyBlock",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="BusyBlock.user_id",
+        order_by="BusyBlock.weekday, BusyBlock.start_time",
     )
