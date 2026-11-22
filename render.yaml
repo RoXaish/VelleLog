@@ -1,0 +1,54 @@
+# Render Blueprint configuration for VelleLog
+# https://render.com/docs/blueprint-spec
+
+services:
+  # ----------------------------------------------------------------------------
+  # Backend API Service (FastAPI + SQLite + Alembic)
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: vellelog-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PROJECT_NAME
+        value: Velle Log
+      - key: ENV
+        value: production
+      - key: DATABASE_URL
+        value: sqlite:////data/vellelog.db
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "60"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAMESITE
+        value: "none"
+      - key: CORS_ORIGINS
+        sync: false # Set in Render dashboard to: ["https://<your-frontend-service-name>.onrender.com"]
+    disk:
+      name: vellelog-data
+      mountPath: /data
+      sizeGB: 1
+
+  # ----------------------------------------------------------------------------
+  # Frontend Static Site (React + TypeScript + Vite)
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: vellelog-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false # Set in Render dashboard to: https://<your-backend-service-name>.onrender.com/api

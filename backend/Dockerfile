@@ -22,6 +22,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy backend application source and alembic configuration
 COPY . .
 
+# Ensure data directory exists for persistent SQLite storage
+RUN mkdir -p /app/data
+
 # Expose backend port
 EXPOSE 8000
 
