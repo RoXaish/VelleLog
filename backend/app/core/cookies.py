@@ -25,6 +25,7 @@ def set_auth_cookies(
 ) -> None:
     """Set the HttpOnly access cookie and its JS-readable CSRF companion."""
     max_age = _cookie_max_age()
+    response.headers["X-CSRF-Token"] = csrf_token
     response.set_cookie(
         key=AUTH_COOKIE_NAME,
         value=access_token,

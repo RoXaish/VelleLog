@@ -30,6 +30,16 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    @field_validator("DATABASE_URL")
+    @classmethod
+    def normalize_database_url(cls, value: str) -> str:
+        # Standardize PostgreSQL URLs (e.g. from Neon or Heroku) for SQLAlchemy 2.0 with psycopg2
+        if value.startswith("postgres://"):
+            return value.replace("postgres://", "postgresql+psycopg2://", 1)
+        if value.startswith("postgresql://") and not value.startswith("postgresql+"):
+            return value.replace("postgresql://", "postgresql+psycopg2://", 1)
+        return value
+
     @field_validator("JWT_SECRET_KEY")
     @classmethod
     def validate_jwt_secret(cls, value: SecretStr) -> SecretStr:

@@ -86,6 +86,8 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/$/
 const CSRF_COOKIE_NAME = 'velle_csrf_token';
 const CSRF_HEADER_NAME = 'X-CSRF-Token';
 
+let memoryCsrfToken: string | null = null;
+
 export class ApiError extends Error {
   status: number;
 
@@ -140,7 +142,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   if (method !== 'GET' && method !== 'HEAD') {
-    const csrfToken = readCookie(CSRF_COOKIE_NAME);
+    const csrfToken = readCookie(CSRF_COOKIE_NAME) || memoryCsrfToken;
     if (csrfToken) {
       headers.set(CSRF_HEADER_NAME, csrfToken);
     }
@@ -159,6 +161,11 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       0,
       'Unable to reach the server. Check your connection and try again.'
     );
+  }
+
+  const responseCsrf = response.headers.get(CSRF_HEADER_NAME);
+  if (responseCsrf) {
+    memoryCsrfToken = responseCsrf;
   }
 
   if (!response.ok) {
@@ -198,7 +205,11 @@ export const authApi = {
   },
 
   async logout(): Promise<void> {
-    await request<void>('/auth/logout', { method: 'POST' });
+    try {
+      await request<void>('/auth/logout', { method: 'POST' });
+    } finally {
+      memoryCsrfToken = null;
+    }
   },
 };
 
