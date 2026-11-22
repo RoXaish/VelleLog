@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import CurrentUser
+from app.api.deps import CsrfProtectedUser, CurrentUser
 from app.db.session import get_db
 from app.models.schedule_exception import ScheduleException
 from app.schemas.schedule_exception import (
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/schedule-exceptions", tags=["schedule-exceptions"])
 )
 def create_schedule_exception(
     payload: ScheduleExceptionCreate,
-    current_user: CurrentUser,
+    current_user: CsrfProtectedUser,
     db: Session = Depends(get_db),
 ) -> ScheduleExceptionResponse:
     """
@@ -84,7 +84,7 @@ def list_schedule_exceptions(
 def update_schedule_exception(
     exception_id: int,
     payload: ScheduleExceptionUpdate,
-    current_user: CurrentUser,
+    current_user: CsrfProtectedUser,
     db: Session = Depends(get_db),
 ) -> ScheduleExceptionResponse:
     """
@@ -136,7 +136,7 @@ def update_schedule_exception(
 )
 def delete_schedule_exception(
     exception_id: int,
-    current_user: CurrentUser,
+    current_user: CsrfProtectedUser,
     db: Session = Depends(get_db),
 ) -> Response:
     """

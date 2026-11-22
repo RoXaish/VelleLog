@@ -10,7 +10,7 @@ from app.core.cookies import (
     generate_csrf_token,
     set_auth_cookies,
 )
-from app.core.security import hash_password, verify_password
+from app.core.security import hash_password, verify_password_or_dummy
 from app.core.tokens import create_access_token
 from app.db.session import get_db
 from app.models.user import User
@@ -85,7 +85,8 @@ def login_user(
         select(User).where(User.email == payload.email)
     ).scalar_one_or_none()
 
-    if user is None or not verify_password(payload.password, user.password_hash):
+    password_hash = user.password_hash if user is not None else None
+    if not verify_password_or_dummy(payload.password, password_hash) or user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",

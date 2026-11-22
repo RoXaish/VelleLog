@@ -90,9 +90,17 @@ export const Header: React.FC = () => {
 
         <div className="nav-actions">
           {status === 'authenticated' ? (
-            <Link to="/account" className="nav-cta">
-              Your space
-            </Link>
+            <>
+              <Link to="/dashboard" className="nav-login">
+                Dashboard
+              </Link>
+              <Link to="/journal" className="nav-login">
+                Journal
+              </Link>
+              <Link to="/account" className="nav-cta">
+                Your space
+              </Link>
+            </>
           ) : (
             <>
               <Link to="/login" className="nav-login">
@@ -143,13 +151,29 @@ export const Header: React.FC = () => {
               </a>
             ))}
             {status === 'authenticated' ? (
-              <Link
-                to="/account"
-                className="mobile-menu__cta"
-                onClick={closeMenu}
-              >
-                Your space
-              </Link>
+              <>
+                <Link
+                  to="/dashboard"
+                  className="mobile-menu__login"
+                  onClick={closeMenu}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  to="/journal"
+                  className="mobile-menu__login"
+                  onClick={closeMenu}
+                >
+                  Journal
+                </Link>
+                <Link
+                  to="/account"
+                  className="mobile-menu__cta"
+                  onClick={closeMenu}
+                >
+                  Your space
+                </Link>
+              </>
             ) : (
               <>
                 <Link

@@ -396,9 +396,12 @@ def test_busy_blocks_support_cookie_authentication(
     )
 
     # Create via cookie auth
+    csrf_token = client.cookies.get("velle_csrf_token")
+    assert csrf_token
     create_res = client.post(
         BUSY_BLOCKS_URL,
         json={"weekday": 5, "start_time": "10:00:00", "end_time": "11:00:00", "private_label": "Saturday Yoga"},
+        headers={"X-CSRF-Token": csrf_token},
     )
     assert create_res.status_code == 201
     block_id = create_res.json()["id"]

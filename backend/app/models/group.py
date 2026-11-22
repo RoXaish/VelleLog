@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.schedule_template import ScheduleTemplate
     from app.models.user import User
 
 
@@ -57,6 +58,12 @@ class Group(Base):
         back_populates="group",
         cascade="all, delete-orphan",
         order_by="GroupMembership.joined_at",
+    )
+    templates: Mapped[list["ScheduleTemplate"]] = relationship(
+        "ScheduleTemplate",
+        back_populates="group",
+        cascade="all, delete-orphan",
+        order_by="ScheduleTemplate.created_at",
     )
 
     def __init__(self, **kwargs):

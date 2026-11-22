@@ -8,6 +8,11 @@ from sqlalchemy.orm import Session, selectinload
 from app.models.busy_block import BusyBlock
 from app.models.group import Group, GroupMembership
 from app.models.schedule_exception import ScheduleException
+from app.models.schedule_template import (
+    AppliedScheduleTemplate,
+    ScheduleTemplate,
+    TemplateBusyBlock,
+)
 from app.schemas.availability import AvailabilitySlotResponse, MemberAvailabilityNow
 
 # Asia/Kolkata timezone (UTC+05:30)
@@ -86,17 +91,23 @@ def compute_effective_busy_intervals(
     member_ids: Sequence[int],
     busy_blocks: Sequence[BusyBlock],
     schedule_exceptions: Sequence[ScheduleException],
+    template_blocks_per_user: dict[int, list[tuple[int, int]]] | None = None,
 ) -> dict[int, list[tuple[int, int]]]:
     """
     Computes effective busy intervals [start_sec, end_sec] for each user.
+    Formula:
+    Effective busy = (personal BusyBlocks + template blocks) - free exceptions + busy exceptions
     - 'busy' exceptions add one-time busy intervals.
-    - 'free' exceptions override recurring busy blocks.
+    - 'free' exceptions override recurring busy blocks (personal and template).
     - If 'busy' and 'free' exceptions overlap, 'busy' takes precedence.
-    Formula: FinalBusy = merge(subtract(merge(Recurring), Free) + Busy)
     """
     user_recurring: dict[int, list[tuple[int, int]]] = {uid: [] for uid in member_ids}
     user_free_ex: dict[int, list[tuple[int, int]]] = {uid: [] for uid in member_ids}
     user_busy_ex: dict[int, list[tuple[int, int]]] = {uid: [] for uid in member_ids}
+    user_template: dict[int, list[tuple[int, int]]] = {
+        uid: list(template_blocks_per_user.get(uid, [])) if template_blocks_per_user else []
+        for uid in member_ids
+    }
 
     for b in busy_blocks:
         if b.user_id in user_recurring:
@@ -114,7 +125,8 @@ def compute_effective_busy_intervals(
 
     effective_busy: dict[int, list[tuple[int, int]]] = {}
     for uid in member_ids:
-        merged_rec = merge_intervals(user_recurring[uid])
+        all_recurring = user_recurring[uid] + user_template[uid]
+        merged_rec = merge_intervals(all_recurring)
         recurring_after_free = subtract_intervals(merged_rec, user_free_ex[uid])
         all_busy = recurring_after_free + user_busy_ex[uid]
         effective_busy[uid] = merge_intervals(all_busy)
@@ -203,10 +215,40 @@ def get_group_availability_now(
         .all()
     )
 
+    # Query template blocks applied by any group member on this weekday
+    applied_template_blocks = db.execute(
+        select(
+            AppliedScheduleTemplate.user_id,
+            TemplateBusyBlock.start_time,
+            TemplateBusyBlock.end_time,
+        )
+        .join(
+            ScheduleTemplate,
+            ScheduleTemplate.id == AppliedScheduleTemplate.template_id,
+        )
+        .join(
+            TemplateBusyBlock,
+            TemplateBusyBlock.template_id == ScheduleTemplate.id,
+        )
+        .where(
+            AppliedScheduleTemplate.user_id.in_(member_ids),
+            TemplateBusyBlock.weekday == current_weekday,
+        )
+    ).all()
+
+    template_blocks_per_user: dict[int, list[tuple[int, int]]] = {
+        uid: [] for uid in member_ids
+    }
+    for row_uid, s_time, e_time in applied_template_blocks:
+        template_blocks_per_user[row_uid].append(
+            (time_to_seconds(s_time), time_to_seconds(e_time))
+        )
+
     effective_busy = compute_effective_busy_intervals(
         member_ids=member_ids,
         busy_blocks=busy_blocks,
         schedule_exceptions=exceptions,
+        template_blocks_per_user=template_blocks_per_user,
     )
 
     results = []
@@ -288,10 +330,40 @@ def get_group_availability_slots(
         .all()
     )
 
+    # Query template blocks applied by any group member on this target weekday
+    applied_template_blocks = db.execute(
+        select(
+            AppliedScheduleTemplate.user_id,
+            TemplateBusyBlock.start_time,
+            TemplateBusyBlock.end_time,
+        )
+        .join(
+            ScheduleTemplate,
+            ScheduleTemplate.id == AppliedScheduleTemplate.template_id,
+        )
+        .join(
+            TemplateBusyBlock,
+            TemplateBusyBlock.template_id == ScheduleTemplate.id,
+        )
+        .where(
+            AppliedScheduleTemplate.user_id.in_(member_ids),
+            TemplateBusyBlock.weekday == target_weekday,
+        )
+    ).all()
+
+    template_blocks_per_user: dict[int, list[tuple[int, int]]] = {
+        uid: [] for uid in member_ids
+    }
+    for row_uid, s_time, e_time in applied_template_blocks:
+        template_blocks_per_user[row_uid].append(
+            (time_to_seconds(s_time), time_to_seconds(e_time))
+        )
+
     user_busy_merged = compute_effective_busy_intervals(
         member_ids=member_ids,
         busy_blocks=blocks,
         schedule_exceptions=exceptions,
+        template_blocks_per_user=template_blocks_per_user,
     )
 
     # Collect boundary points across the entire day [0, 86400]

@@ -38,7 +38,7 @@ export const AccountPage: React.FC = () => {
     <AuthShell
       eyebrow="Signed in"
       title="Your space."
-      description="Your account is ready. Groups and weekly rhythms arrive in the next chapters."
+      description="Your account is active. Access your dashboard, manage your journal, and organize your space."
     >
       {error && (
         <div className="form-alert form-alert--error" role="alert">
@@ -52,14 +52,22 @@ export const AccountPage: React.FC = () => {
         <p className="account-summary__meta">Member since {memberSince}</p>
       </div>
 
-      <button
-        type="button"
-        className="btn btn--primary auth-submit"
-        onClick={handleLogout}
-        disabled={signingOut}
-      >
-        {signingOut ? 'Signing out…' : 'Sign out'}
-      </button>
+      <div className="account-actions">
+        <Link to="/dashboard" className="btn btn--primary auth-submit">
+          Go to Dashboard
+        </Link>
+        <Link to="/journal" className="btn btn--ghost auth-submit">
+          Open your journal
+        </Link>
+        <button
+          type="button"
+          className="btn btn--ghost auth-submit"
+          onClick={handleLogout}
+          disabled={signingOut}
+        >
+          {signingOut ? 'Signing out…' : 'Sign out'}
+        </button>
+      </div>
 
       <p className="auth-switch">
         <Link to="/">Back to the landing page</Link>

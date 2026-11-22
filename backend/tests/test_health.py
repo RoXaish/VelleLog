@@ -13,3 +13,13 @@ def test_health_check(client: TestClient) -> None:
 
     # Assert JSON payload matches expected format exactly
     assert response.json() == {"status": "ok"}
+
+
+def test_root_health_check(client: TestClient) -> None:
+    """
+    Verify GET /health returns HTTP 200 and exact JSON {"status": "ok"}.
+    Supports load balancer health checks directly targeting /health.
+    """
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}

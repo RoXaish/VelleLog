@@ -354,7 +354,13 @@ def test_groups_support_cookie_authentication(
     )
 
     # Post group using cookie auth without explicit Bearer header
-    create_res = client.post(GROUPS_URL, json={"name": "Cookie Group"})
+    csrf_token = client.cookies.get("velle_csrf_token")
+    assert csrf_token
+    create_res = client.post(
+        GROUPS_URL,
+        json={"name": "Cookie Group"},
+        headers={"X-CSRF-Token": csrf_token},
+    )
     assert create_res.status_code == 201
     group_id = create_res.json()["id"]
 

@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import CurrentUser
+from app.api.deps import CsrfProtectedUser, CurrentUser
 from app.db.session import get_db
 from app.models.group import Group, GroupMembership, GroupRole
 from app.schemas.availability import AvailabilitySlotResponse, MemberAvailabilityNow
@@ -30,7 +30,7 @@ router = APIRouter(prefix="/groups", tags=["groups"])
 )
 def create_group(
     payload: GroupCreate,
-    current_user: CurrentUser,
+    current_user: CsrfProtectedUser,
     db: Session = Depends(get_db),
 ) -> GroupResponse:
     """
@@ -87,7 +87,7 @@ def list_groups(
 )
 def join_group(
     payload: GroupJoin,
-    current_user: CurrentUser,
+    current_user: CsrfProtectedUser,
     db: Session = Depends(get_db),
 ) -> GroupResponse:
     """

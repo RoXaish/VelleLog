@@ -11,13 +11,25 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     description="Backend API for Velle Log - Coordination platform for friend groups.",
     version="0.1.0",
+    docs_url="/docs" if settings.ENV != "production" else None,
+    redoc_url="/redoc" if settings.ENV != "production" else None,
+    openapi_url="/openapi.json" if settings.ENV != "production" else None,
 )
+
+
+@app.get("/health", summary="Health Check", tags=["health"])
+def health_check() -> dict[str, str]:
+    """
+    Root health check endpoint returning application status.
+    Accessible without authentication for load balancers and orchestrators.
+    """
+    return {"status": "ok"}
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
 )
 

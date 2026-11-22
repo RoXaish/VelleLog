@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import CurrentUser
+from app.api.deps import CsrfProtectedUser, CurrentUser
 from app.db.session import get_db
 from app.models.busy_block import BusyBlock
 from app.schemas.busy_block import (
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/busy-blocks", tags=["busy-blocks"])
 )
 def create_busy_block(
     payload: BusyBlockCreate,
-    current_user: CurrentUser,
+    current_user: CsrfProtectedUser,
     db: Session = Depends(get_db),
 ) -> BusyBlockResponse:
     """
@@ -75,7 +75,7 @@ def list_busy_blocks(
 )
 def copy_day_busy_blocks(
     payload: BusyBlockCopyDay,
-    current_user: CurrentUser,
+    current_user: CsrfProtectedUser,
     db: Session = Depends(get_db),
 ) -> list[BusyBlockResponse]:
     """
@@ -135,7 +135,7 @@ def copy_day_busy_blocks(
 def update_busy_block(
     block_id: int,
     payload: BusyBlockUpdate,
-    current_user: CurrentUser,
+    current_user: CsrfProtectedUser,
     db: Session = Depends(get_db),
 ) -> BusyBlockResponse:
     """
@@ -185,7 +185,7 @@ def update_busy_block(
 )
 def delete_busy_block(
     block_id: int,
-    current_user: CurrentUser,
+    current_user: CsrfProtectedUser,
     db: Session = Depends(get_db),
 ) -> Response:
     """

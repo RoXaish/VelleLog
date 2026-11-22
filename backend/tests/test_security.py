@@ -1,6 +1,6 @@
 import pytest
 
-from app.core.security import hash_password, verify_password
+from app.core.security import hash_password, verify_password, verify_password_or_dummy
 
 RAW_PASSWORD = "correct horse battery staple"
 
@@ -43,3 +43,19 @@ def test_verify_password_returns_false_for_invalid_hash(invalid_hash: str) -> No
     instead of raising an exception.
     """
     assert verify_password(RAW_PASSWORD, invalid_hash) is False
+
+
+def test_verify_password_or_dummy_rejects_unknown_account() -> None:
+    """
+    A missing stored hash still performs a failed verification rather than
+    short-circuiting, which keeps unknown-email login timing closer to a
+    wrong-password attempt.
+    """
+    assert verify_password_or_dummy(RAW_PASSWORD, None) is False
+
+
+def test_verify_password_or_dummy_uses_real_hash_when_present() -> None:
+    password_hash = hash_password(RAW_PASSWORD)
+
+    assert verify_password_or_dummy(RAW_PASSWORD, password_hash) is True
+    assert verify_password_or_dummy("wrong password", password_hash) is False

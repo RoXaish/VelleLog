@@ -104,6 +104,55 @@ def test_cookie_authenticates_me(client: TestClient, db_session: Session) -> Non
     assert "password" not in response.text
 
 
+def test_cookie_mutation_requires_csrf(
+    client: TestClient, db_session: Session
+) -> None:
+    register_user(client)
+    login_user(client)
+
+    payload = {
+        "weekday": 0,
+        "start_time": "09:00:00",
+        "end_time": "10:00:00",
+    }
+
+    missing = client.post("/api/busy-blocks", json=payload)
+    assert missing.status_code == 403
+    assert missing.json()["detail"] == "CSRF token validation failed"
+
+    invalid = client.post(
+        "/api/busy-blocks",
+        json=payload,
+        headers={CSRF_HEADER: "not-the-issued-token"},
+    )
+    assert invalid.status_code == 403
+
+    csrf_token = client.cookies.get(CSRF_COOKIE)
+    assert csrf_token
+    valid = client.post(
+        "/api/busy-blocks",
+        json=payload,
+        headers={CSRF_HEADER: csrf_token},
+    )
+    assert valid.status_code == 201
+
+
+def test_bearer_mutation_does_not_require_csrf(
+    client: TestClient, db_session: Session
+) -> None:
+    register_user(client)
+    token = login_user(client)["access_token"]
+    client.cookies.clear()
+
+    response = client.post(
+        "/api/busy-blocks",
+        json={"weekday": 0, "start_time": "09:00:00", "end_time": "10:00:00"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 201
+
+
 def test_logout_clears_cookies_and_ends_session(
     client: TestClient, db_session: Session
 ) -> None:
@@ -251,6 +300,27 @@ def test_cors_preflight_allows_csrf_header(client: TestClient) -> None:
     assert response.headers["access-control-allow-credentials"] == "true"
     assert "POST" in response.headers["access-control-allow-methods"]
     assert "x-csrf-token" in response.headers["access-control-allow-headers"].lower()
+
+
+@pytest.mark.parametrize("method", ["PUT", "PATCH", "DELETE"])
+def test_cors_preflight_allows_mutating_methods(
+    client: TestClient, method: str
+) -> None:
+    origin = "http://frontend.test"
+
+    response = client.options(
+        "/api/busy-blocks/1",
+        headers={
+            "Origin": origin,
+            "Access-Control-Request-Method": method,
+            "Access-Control-Request-Headers": "content-type,x-csrf-token",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == origin
+    assert response.headers["access-control-allow-credentials"] == "true"
+    assert method in response.headers["access-control-allow-methods"]
 
 
 def test_cors_rejects_unconfigured_origin(client: TestClient) -> None:

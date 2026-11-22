@@ -9,7 +9,10 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.models.busy_block import BusyBlock
     from app.models.group import Group, GroupMembership
+    from app.models.journal_entry import JournalEntry
     from app.models.schedule_exception import ScheduleException
+    from app.models.schedule_template import AppliedScheduleTemplate
+    from app.models.tag import Tag
 
 
 class User(Base):
@@ -62,4 +65,25 @@ class User(Base):
         cascade="all, delete-orphan",
         foreign_keys="ScheduleException.user_id",
         order_by="ScheduleException.date, ScheduleException.start_time",
+    )
+    applied_templates: Mapped[list["AppliedScheduleTemplate"]] = relationship(
+        "AppliedScheduleTemplate",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="AppliedScheduleTemplate.user_id",
+        order_by="AppliedScheduleTemplate.applied_at",
+    )
+    journal_entries: Mapped[list["JournalEntry"]] = relationship(
+        "JournalEntry",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="JournalEntry.user_id",
+        order_by="JournalEntry.created_at.desc(), JournalEntry.id.desc()",
+    )
+    tags: Mapped[list["Tag"]] = relationship(
+        "Tag",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="Tag.user_id",
+        order_by="Tag.name",
     )

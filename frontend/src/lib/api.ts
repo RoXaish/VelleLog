@@ -10,6 +10,73 @@ export interface Credentials {
   password: string;
 }
 
+export type Mood =
+  | 'happy'
+  | 'calm'
+  | 'excited'
+  | 'grateful'
+  | 'neutral'
+  | 'sad'
+  | 'anxious'
+  | 'stressed';
+
+export interface TagSummary {
+  id: number;
+  name: string;
+}
+
+export interface Tag {
+  id: number;
+  user_id: number;
+  name: string;
+  entry_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JournalEntry {
+  id: number;
+  user_id: number;
+  title: string;
+  content: string;
+  mood: Mood | null;
+  tags: TagSummary[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JournalEntryInput {
+  title: string;
+  content: string;
+  mood?: Mood | null;
+  tag_ids?: number[];
+}
+
+export interface JournalEntryList {
+  items: JournalEntry[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  has_next: boolean;
+  has_previous: boolean;
+}
+
+export interface JournalEntryListParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  tagIds?: number[];
+  mood?: Mood | null;
+}
+
+export interface Dashboard {
+  total_entries: number;
+  entries_this_week: number;
+  current_streak: number;
+  recent_entries: JournalEntry[];
+}
+
 interface LoginResponse {
   access_token: string;
   token_type: string;
@@ -30,14 +97,18 @@ export class ApiError extends Error {
 }
 
 function readCookie(name: string): string | null {
-  const prefix = `${name}=`;
-  const match = document.cookie
-    .split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(prefix));
+  for (const part of document.cookie.split(';')) {
+    const trimmed = part.trim();
+    const separator = trimmed.indexOf('=');
+    if (separator === -1 || trimmed.slice(0, separator) !== name) continue;
 
-  if (!match) return null;
-  return decodeURIComponent(match.slice(prefix.length));
+    try {
+      return decodeURIComponent(trimmed.slice(separator + 1));
+    } catch {
+      return null;
+    }
+  }
+  return null;
 }
 
 function errorMessage(body: unknown): string {
@@ -128,5 +199,80 @@ export const authApi = {
 
   async logout(): Promise<void> {
     await request<void>('/auth/logout', { method: 'POST' });
+  },
+};
+
+export const journalApi = {
+  list({
+    page = 1,
+    pageSize = 10,
+    search = '',
+    tagIds = [],
+    mood = null,
+  }: JournalEntryListParams = {}): Promise<JournalEntryList> {
+    const params = new URLSearchParams({
+      page: String(page),
+      page_size: String(pageSize),
+    });
+    if (search.trim()) params.set('search', search.trim());
+    tagIds.forEach((tagId) => params.append('tag_ids', String(tagId)));
+    if (mood) params.set('mood', mood);
+
+    return request<JournalEntryList>(`/journal-entries?${params.toString()}`);
+  },
+
+  get(entryId: number | string): Promise<JournalEntry> {
+    return request<JournalEntry>(`/journal-entries/${entryId}`);
+  },
+
+  create(payload: JournalEntryInput): Promise<JournalEntry> {
+    return request<JournalEntry>('/journal-entries', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  update(
+    entryId: number | string,
+    payload: Partial<JournalEntryInput>
+  ): Promise<JournalEntry> {
+    return request<JournalEntry>(`/journal-entries/${entryId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  remove(entryId: number | string): Promise<void> {
+    return request<void>(`/journal-entries/${entryId}`, { method: 'DELETE' });
+  },
+};
+
+export const tagsApi = {
+  list(): Promise<Tag[]> {
+    return request<Tag[]>('/tags');
+  },
+
+  create(name: string): Promise<Tag> {
+    return request<Tag>('/tags', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  },
+
+  update(tagId: number | string, name: string): Promise<Tag> {
+    return request<Tag>(`/tags/${tagId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name }),
+    });
+  },
+
+  remove(tagId: number | string): Promise<void> {
+    return request<void>(`/tags/${tagId}`, { method: 'DELETE' });
+  },
+};
+
+export const dashboardApi = {
+  get(): Promise<Dashboard> {
+    return request<Dashboard>('/dashboard');
   },
 };
