@@ -99,8 +99,9 @@ section[id] {
   padding: 8px 14px;
   border-radius: var(--radius-pill);
   color: var(--text-secondary);
-  font-size: 0.9rem;
-  font-weight: 450;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
   text-decoration: none;
   transition:
     color var(--transition-fast),
@@ -124,8 +125,9 @@ section[id] {
   align-items: center;
   padding: 8px 12px;
   border-radius: var(--radius-pill);
-  font-size: 0.9rem;
-  font-weight: 450;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
   color: var(--text-secondary);
   text-decoration: none;
   transition:
@@ -147,9 +149,9 @@ section[id] {
   border-radius: var(--radius-pill);
   background: var(--grad-warm);
   color: #1a0b06;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  text-decoration: none;
+  letter-spacing: -0.01em;
   box-shadow:
     0 12px 28px -14px rgba(255, 77, 58, 0.7),
     inset 0 1px 0 rgba(255, 255, 255, 0.35);
@@ -286,8 +288,8 @@ section[id] {
   margin: 30px auto 24px;
   font-size: clamp(3rem, 7.2vw, 5.5rem);
   font-weight: 700;
-  line-height: 1.02;
-  letter-spacing: -0.045em;
+  line-height: 1.06;
+  letter-spacing: -0.035em;
   color: var(--text-primary);
   text-wrap: balance;
 }
@@ -304,7 +306,8 @@ section[id] {
   margin-inline: auto;
   color: var(--text-secondary);
   font-size: clamp(1rem, 1.6vw, 1.19rem);
-  line-height: 1.65;
+  line-height: 1.6;
+  letter-spacing: -0.011em;
   text-wrap: pretty;
 }
 
@@ -334,6 +337,7 @@ section[id] {
   font-family: inherit;
   font-size: 0.95rem;
   font-weight: 600;
+  letter-spacing: -0.012em;
   text-decoration: none;
   cursor: pointer;
   transition:
@@ -878,8 +882,8 @@ section[id] {
 .section-title {
   font-size: clamp(2rem, 4.2vw, 3.05rem);
   font-weight: 650;
-  line-height: 1.08;
-  letter-spacing: -0.035em;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
   color: var(--text-primary);
   text-wrap: balance;
 }
@@ -889,6 +893,7 @@ section[id] {
   color: var(--text-secondary);
   font-size: 1rem;
   line-height: 1.6;
+  letter-spacing: -0.011em;
   text-wrap: pretty;
 }
 
@@ -1499,8 +1504,8 @@ section[id] {
   margin: 14px 0 12px;
   font-size: clamp(2rem, 5vw, 2.6rem);
   font-weight: 700;
-  line-height: 1.06;
-  letter-spacing: -0.038em;
+  line-height: 1.1;
+  letter-spacing: -0.032em;
   color: var(--text-primary);
 }
 
@@ -1509,7 +1514,8 @@ section[id] {
   margin-bottom: 28px;
   color: var(--text-secondary);
   font-size: 0.93rem;
-  line-height: 1.65;
+  line-height: 1.6;
+  letter-spacing: -0.011em;
 }
 
 .auth-form {
@@ -1528,7 +1534,7 @@ section[id] {
 .field__label {
   font-size: 0.82rem;
   font-weight: 500;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.005em;
   color: var(--text-secondary);
 }
 
@@ -1546,6 +1552,7 @@ section[id] {
   color: var(--text-primary);
   font-family: inherit;
   font-size: 0.95rem;
+  letter-spacing: -0.01em;
   transition:
     border-color var(--transition-fast),
     background-color var(--transition-fast),
@@ -1906,9 +1913,9 @@ section[id] {
 .journal-title {
   margin: 12px 0;
   font-size: clamp(2.4rem, 6vw, 4rem);
-  font-weight: 650;
-  line-height: 1;
-  letter-spacing: -0.045em;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.032em;
   color: var(--text-primary);
 }
 
@@ -1916,7 +1923,8 @@ section[id] {
   max-width: 52ch;
   color: var(--text-secondary);
   font-size: 0.95rem;
-  line-height: 1.65;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
 }
 
 .journal-intro__meta {
@@ -2039,9 +2047,9 @@ section[id] {
 
 .journal-entry__title {
   font-size: 1.12rem;
-  font-weight: 550;
-  line-height: 1.35;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.016em;
   color: var(--text-primary);
   transition: color var(--transition-fast);
 }
@@ -2057,7 +2065,8 @@ section[id] {
   -webkit-line-clamp: 2;
   color: var(--text-muted);
   font-size: 0.87rem;
-  line-height: 1.6;
+  line-height: 1.55;
+  letter-spacing: -0.008em;
 }
 
 .journal-entry__arrow {
@@ -2270,7 +2279,7 @@ section[id] {
   font-family: var(--font-serif);
   font-size: clamp(1.8rem, 4vw, 2.8rem);
   line-height: 1.15;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.03em;
   outline: none;
   transition: border-color var(--transition-fast);
 }
@@ -2297,7 +2306,8 @@ section[id] {
   color: var(--text-primary);
   font-family: var(--font-serif);
   font-size: 1.02rem;
-  line-height: 1.85;
+  line-height: 1.8;
+  letter-spacing: -0.01em;
   resize: vertical;
   outline: none;
   transition:
@@ -2411,8 +2421,8 @@ section[id] {
   font-family: var(--font-serif);
   font-size: clamp(2.3rem, 5.5vw, 3.8rem);
   font-weight: 600;
-  line-height: 1.08;
-  letter-spacing: -0.035em;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
   overflow-wrap: anywhere;
 }
 
@@ -2434,7 +2444,8 @@ section[id] {
   color: rgba(247, 242, 235, 0.88);
   font-family: var(--font-serif);
   font-size: 1.12rem;
-  line-height: 1.9;
+  line-height: 1.85;
+  letter-spacing: -0.012em;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
@@ -3203,6 +3214,7 @@ section[id] {
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
   color: #fff7f2;
 }
 
@@ -3210,12 +3222,15 @@ section[id] {
   margin-top: 8px;
   font-size: 0.86rem;
   font-weight: 500;
+  letter-spacing: -0.008em;
   color: var(--text-secondary);
 }
 
 .dashboard-stat__hint {
   margin-top: 6px;
   font-size: 0.78rem;
+  line-height: 1.45;
+  letter-spacing: -0.005em;
   color: var(--text-faint);
 }
 
